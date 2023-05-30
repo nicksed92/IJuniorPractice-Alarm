@@ -4,9 +4,16 @@ using UnityEngine;
 [RequireComponent(typeof(AudioSource))]
 public class Alarm : MonoBehaviour
 {
+    [SerializeField] private AlarmTrigger _trigger;
+
     private AudioSource _audioSource;
     private Coroutine _currentVolumeRoutine;
     private WaitForSeconds _waitForSeconds;
+
+    private void Awake()
+    {
+        _trigger.Triggered.AddListener(OnTriggered);
+    }
 
     private void Start()
     {
@@ -14,22 +21,10 @@ public class Alarm : MonoBehaviour
         _waitForSeconds = new WaitForSeconds(0.05f);
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggered(bool isEntered)
     {
-        if (other.TryGetComponent<PlayerMovement>(out var playerMovement))
-        {
-            StopRoutine(_currentVolumeRoutine);
-            _currentVolumeRoutine = StartCoroutine(UpVolume());
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.TryGetComponent<PlayerMovement>(out var playerMovement))
-        {
-            StopRoutine(_currentVolumeRoutine);
-            _currentVolumeRoutine = StartCoroutine(DownVolume());
-        }
+        StopRoutine(_currentVolumeRoutine);
+        _currentVolumeRoutine = StartCoroutine(ChangeVolume(isEntered));
     }
 
     private void StopRoutine(Coroutine coroutine)
@@ -38,28 +33,26 @@ public class Alarm : MonoBehaviour
             StopCoroutine(coroutine);
     }
 
-    private IEnumerator UpVolume()
+    private IEnumerator ChangeVolume(bool isEntered)
     {
-        if (_audioSource.isPlaying == false)
+        if (isEntered && _audioSource.isPlaying == false)
         {
             _audioSource.Play();
         }
 
-        while (_audioSource.volume < 1f)
-        {
-            _audioSource.volume += Time.deltaTime;
-            yield return _waitForSeconds;
-        }
-    }
+        float targetVolume = isEntered ? 1f : 0f;
+        float delta;
 
-    private IEnumerator DownVolume()
-    {
-        while (_audioSource.volume > 0)
+        while (_audioSource.volume != targetVolume)
         {
-            _audioSource.volume -= Time.deltaTime;
+            delta = isEntered ? Time.deltaTime : -Time.deltaTime;
+            _audioSource.volume = Mathf.Clamp01(_audioSource.volume + delta);
             yield return _waitForSeconds;
         }
 
-        _audioSource.Stop();
+        if (isEntered == false)
+        {
+            _audioSource.Stop();
+        }
     }
 }
