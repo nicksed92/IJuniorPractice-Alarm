@@ -5,6 +5,7 @@ using UnityEngine;
 public class Alarm : MonoBehaviour
 {
     [SerializeField] private AlarmTrigger _trigger;
+    [SerializeField] private float _volumeStepDelay = 0.05f;
 
     private AudioSource _audioSource;
     private Coroutine _currentVolumeRoutine;
@@ -18,7 +19,7 @@ public class Alarm : MonoBehaviour
     private void Start()
     {
         _audioSource = GetComponent<AudioSource>();
-        _waitForSeconds = new WaitForSeconds(0.05f);
+        _waitForSeconds = new WaitForSeconds(_volumeStepDelay);
     }
 
     private void OnTriggered(bool isEntered)
@@ -35,13 +36,15 @@ public class Alarm : MonoBehaviour
 
     private IEnumerator ChangeVolume(bool isEntered)
     {
+        float minVolume = 0f;
+        float maxVolume = 1f;
+        float targetVolume = isEntered ? maxVolume : minVolume;
+        float delta;
+
         if (isEntered && _audioSource.isPlaying == false)
         {
             _audioSource.Play();
         }
-
-        float targetVolume = isEntered ? 1f : 0f;
-        float delta;
 
         while (_audioSource.volume != targetVolume)
         {
